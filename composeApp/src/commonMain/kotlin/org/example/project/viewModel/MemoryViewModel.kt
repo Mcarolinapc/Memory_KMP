@@ -4,10 +4,20 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
 import memorymichapp.composeapp.generated.resources.Res
 import memorymichapp.composeapp.generated.resources.*
+import org.example.project.audio.AudioPlayer
 import org.example.project.model.CardMemory
 import org.jetbrains.compose.resources.DrawableResource
+
 
 class MemoryViewModel : ViewModel() {
 
@@ -17,14 +27,23 @@ class MemoryViewModel : ViewModel() {
     var tipo by mutableStateOf("flor")
         private set
 
-    var cards by mutableStateOf<List<CardMemory>>(emptyList())
-        private set
-
-    // Para controlar el estado interno del juego
     private var indexCartaVolteada: Int? = null
     private var movimientos = 0
 
-    // Funciones para actualizar estado (puedes llamarlas desde la UI)
+    var cards by mutableStateOf<List<CardMemory>>(emptyList())
+        private set
+
+    var cartasParaOcultar by mutableStateOf<Pair<Int, Int>?>(null)
+
+    var musicaActiva by mutableStateOf(true)
+
+    init {
+        if (musicaActiva) {
+            AudioPlayer.play()
+        } else {
+            AudioPlayer.pause()
+        }
+    }
 
     fun actualizarDificultad(nueva: String) {
         dificultad = nueva
@@ -34,13 +53,32 @@ class MemoryViewModel : ViewModel() {
         tipo = nuevo
     }
 
-    // Inicia el juego con dificultad y tipo, genera cartas
+    fun toggleMusica() {
+        musicaActiva = !musicaActiva
+        if (musicaActiva) {
+            AudioPlayer.play()
+        } else {
+            AudioPlayer.stop()
+        }
+    }
     fun startGame(dificultad: String, tipo: String) {
         this.dificultad = dificultad
         this.tipo = tipo
         cards = generarCartas(dificultad, tipo)
         indexCartaVolteada = null
         movimientos = 0
+        cartasParaOcultar = null
+
+        val duracion = when (dificultad.lowercase()) {
+            "facil" -> 60
+            "medio" -> 120
+            "dificil" -> 180
+            else -> 60
+        }
+        _tiempoRestante.value = duracion
+        _paresEncontrados.value = 0
+        _juegoFinalizado.value = false
+        iniciarTemporizador(duracion)
     }
 
     private fun generarCartas(dificultad: String, tipo: String): List<CardMemory> {
@@ -65,7 +103,51 @@ class MemoryViewModel : ViewModel() {
             )
         }
     }
-// esto si da tiempo lo paso a un provider
+
+    fun voltearCarta(indice: Int, onGameFinished: (movimientos: Int) -> Unit) {
+        val carta = cards[indice]
+        if (carta.isFaceUp || carta.isMatched) return
+
+        val newCards = cards.toMutableList()
+        newCards[indice] = carta.copy(isFaceUp = true)
+        cards = newCards
+
+        if (indexCartaVolteada == null) {
+            indexCartaVolteada = indice
+        } else {
+            movimientos++
+            val primerIndice = indexCartaVolteada!!
+            val segundaIndice = indice
+
+            val primeraCarta = cards[primerIndice]
+
+            if (primeraCarta.imageResId == carta.imageResId) {
+                newCards[primerIndice] = primeraCarta.copy(isMatched = true)
+                newCards[segundaIndice] = carta.copy(isMatched = true, isFaceUp = true)
+                cards = newCards
+                incrementarPares()
+            } else {
+                cartasParaOcultar = Pair(primerIndice, segundaIndice)
+            }
+            indexCartaVolteada = null
+
+            if (newCards.all { it.isMatched }) {
+                onGameFinished(movimientos)
+            }
+        }
+    }
+
+    fun ocultarCartasNoEmparejadas() {
+        cartasParaOcultar?.let { (i1, i2) ->
+            val newCards = cards.toMutableList()
+            newCards[i1] = newCards[i1].copy(isFaceUp = false)
+            newCards[i2] = newCards[i2].copy(isFaceUp = false)
+            cards = newCards
+        }
+        cartasParaOcultar = null
+    }
+
+    // esto si da tiempo lo paso a un provider
     private fun getImagesForTipo(tipo: String): List<DrawableResource> = when (tipo.lowercase()) {
         "flor" -> listOf(
             Res.drawable.flor_1, Res.drawable.flor_2, Res.drawable.flor_3,
@@ -93,55 +175,42 @@ class MemoryViewModel : ViewModel() {
         )
         else -> emptyList()
     }
+    //gestion del resultado
 
+    private val viewModelScope = CoroutineScope(Dispatchers.Main + Job())
 
-    // Función que se llama al tocar una carta
-    fun voltearCarta(indice: Int, onGameFinished: (movimientos: Int) -> Unit) {
-        // Si la carta ya está emparejada o volteada, no hacer nada
-        val carta = cards[indice]
-        if (carta.isFaceUp || carta.isMatched) return
+    private val _paresEncontrados = MutableStateFlow(0)
+    val paresEncontrados: StateFlow<Int> = _paresEncontrados.asStateFlow()
 
-        val newCards = cards.toMutableList()
+    private val _tiempoRestante = MutableStateFlow(0)
+    val tiempoRestante: StateFlow<Int> = _tiempoRestante.asStateFlow()
 
-        // Voltear carta seleccionada
-        newCards[indice] = carta.copy(isFaceUp = true)
-        cards = newCards
+    private val _juegoFinalizado = MutableStateFlow(false)
+    val juegoFinalizado: StateFlow<Boolean> = _juegoFinalizado.asStateFlow()
 
-        if (indexCartaVolteada == null) {
-            // Primera carta volteada
-            indexCartaVolteada = indice
-        } else {
-            // Segunda carta volteada, comparar
-            movimientos++
-            val primerIndice = indexCartaVolteada!!
-            val segundaIndice = indice
+    private var temporizadorJob: Job? = null
 
-            val primeraCarta = cards[primerIndice]
-
-            if (primeraCarta.imageResId == carta.imageResId) {
-                // Coinciden -> marcar como emparejadas
-                newCards[primerIndice] = primeraCarta.copy(isMatched = true)
-                newCards[segundaIndice] = carta.copy(isMatched = true, isFaceUp = true)
-                cards = newCards
-            } else {
-                // No coinciden -> dar tiempo para que el usuario vea, luego ocultar
-                // Aquí necesitas un delay (se puede hacer con Coroutine en Compose)
-                // Para ejemplo, usamos LaunchedEffect en Compose, no aquí en ViewModel
+    private fun iniciarTemporizador(segundos: Int) {
+        temporizadorJob?.cancel()
+        temporizadorJob = viewModelScope.launch {
+            var tiempo = segundos
+            while (tiempo > 0) {
+                delay(1000)
+                tiempo--
+                _tiempoRestante.value = tiempo
             }
-            indexCartaVolteada = null
-
-            // Comprobar si juego terminado
-            if (newCards.all { it.isMatched }) {
-                onGameFinished(movimientos)
-            }
+            _juegoFinalizado.value = true
         }
     }
 
-    // Para ocultar cartas no coincidentes después de un delay (llámalo desde Compose)
-    fun ocultarCartasNoEmparejadas(indice1: Int, indice2: Int) {
-        val newCards = cards.toMutableList()
-        newCards[indice1] = newCards[indice1].copy(isFaceUp = false)
-        newCards[indice2] = newCards[indice2].copy(isFaceUp = false)
-        cards = newCards
+    fun incrementarPares() {
+        _paresEncontrados.value = _paresEncontrados.value + 1
+    }
+
+    fun reiniciarJuego() {
+        temporizadorJob?.cancel()
+        _tiempoRestante.value = 0
+        _paresEncontrados.value = 0
+        _juegoFinalizado.value = false
     }
 }

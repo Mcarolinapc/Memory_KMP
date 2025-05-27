@@ -16,8 +16,11 @@ import androidx.compose.ui.Modifier
 //import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
@@ -29,213 +32,153 @@ import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.grid.itemsIndexed
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Switch
+import androidx.compose.material3.SwitchDefaults
 import org.example.project.model.CardMemory
 import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.ExperimentalResourceApi
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import org.example.project.audio.AudioPlayer
 import org.example.project.viewModel.MemoryViewModel
 
-/*@Composable
-fun GameScreen(
-    dificultad: String,
-    tipo: String,
-    onFinish: (Int) -> Unit,
-    viewModel: MemoryViewModel
-) {
-    LaunchedEffect(Unit) {
-        viewModel.startGame(dificultad, tipo)
-    }
-
-    val cards = viewModel.cards
-
-    var cartasParaOcultar by remember { mutableStateOf<Pair<Int, Int>?>(null) }
-
-    if (cartasParaOcultar != null) {
-        LaunchedEffect(cartasParaOcultar) {
-            kotlinx.coroutines.delay(1000L)
-            viewModel.ocultarCartasNoEmparejadas(
-                cartasParaOcultar!!.first,
-                cartasParaOcultar!!.second
-            )
-            cartasParaOcultar = null
-        }
-    }
-
-    val columnas = columnasPorDificultad(dificultad)
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .fillMaxHeight(0.5f) // Ocupa el 50% de la altura total
-            .padding(16.dp),
-            contentAlignment = Alignment.Center
-    ) {
-    BoxWithConstraints(
-        modifier = Modifier.fillMaxSize()
-    ) {
-        val spacing = 8.dp * (columnas - 1)
-        // Tamaño base calculado para ancho y alto igual (cuadrado)
-        val cartaSizeRaw = (maxWidth - spacing - 16.dp) / columnas // 16.dp padding extra
-
-        // Limitamos tamaño para que no sea ni muy pequeño ni muy grande (ajusta valores)
-        val cartaSize = cartaSizeRaw.coerceIn(80.dp, 150.dp)
-
-        LazyVerticalGrid(
-            columns = GridCells.Fixed(columnas),
-            contentPadding = PaddingValues(8.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
-            modifier = Modifier.fillMaxSize()
-        ) {
-            itemsIndexed(cards) { index, card ->
-                Card(
-                    modifier = Modifier
-                        .size(cartaSize)
-                        .clickable {
-                            if (cartasParaOcultar == null) {
-                                val antes = viewModel.cards
-                                viewModel.voltearCarta(index) { movimientos ->
-                                    onFinish(movimientos)
-                                }
-
-                                val despues = viewModel.cards
-                                if (antes[index].isFaceUp == false && despues[index].isFaceUp == true) {
-                                    val flippedCards =
-                                        despues.filter { it.isFaceUp && !it.isMatched }
-                                    if (flippedCards.size == 2) {
-                                        val idxs = despues.mapIndexedNotNull { i, c ->
-                                            if (c.isFaceUp && !c.isMatched) i else null
-                                        }
-                                        if (flippedCards[0].imageResId != flippedCards[1].imageResId) {
-                                            cartasParaOcultar = Pair(idxs[0], idxs[1])
-                                        }
-                                    }
-                                }
-                            }
-                        },
-                    shape = MaterialTheme.shapes.medium,
-                    elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
-                ) {
-                    if (card.isFaceUp || card.isMatched) {
-                        Image(
-                            painter = painterResource(card.imageResId),
-                            contentDescription = null,
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .padding(8.dp), // un poco de padding para que no quede pegada al borde
-                            contentScale = ContentScale.Fit // mantén proporción y centrado
-                        )
-                    } else {
-                        Surface(
-                            modifier = Modifier.fillMaxSize(),
-                            color = MaterialTheme.colorScheme.primary
-                        ) {}
-                    }
-                }
-            }
-        }
-    }
-}
-}
-
-fun columnasPorDificultad(dificultad: String): Int {
-    return when (dificultad.lowercase()) {
-        "facil" -> 2
-        "medio" -> 4
-        "dificil" -> 4
-        else -> 2
-    }
-}*/
 @Composable
 fun GameScreen(
     dificultad: String,
     tipo: String,
-    onFinish: (Int) -> Unit,
-    viewModel: MemoryViewModel
+    viewModel: MemoryViewModel,
+    onFinish: (Int) -> Unit
 ) {
+    val azulClaro = Color(0xFF4A90E2)
+    val blanco = Color.White
+    val azulClaroSuave = Color(0xFFB3D4FC)
+
     LaunchedEffect(Unit) {
         viewModel.startGame(dificultad, tipo)
     }
 
-    val cards = viewModel.cards
-    var cartasParaOcultar by remember { mutableStateOf<Pair<Int, Int>?>(null) }
+    val tiempoRestante by viewModel.tiempoRestante.collectAsState()
+    val paresEncontrados by viewModel.paresEncontrados.collectAsState()
+    val juegoFinalizado by viewModel.juegoFinalizado.collectAsState()
+    val cartasParaOcultar = viewModel.cartasParaOcultar
 
     if (cartasParaOcultar != null) {
         LaunchedEffect(cartasParaOcultar) {
             kotlinx.coroutines.delay(1000L)
-            viewModel.ocultarCartasNoEmparejadas(cartasParaOcultar!!.first, cartasParaOcultar!!.second)
-            cartasParaOcultar = null
+            viewModel.ocultarCartasNoEmparejadas()
         }
     }
 
-    BoxWithConstraints(
+    if (juegoFinalizado) {
+        LaunchedEffect(Unit) {
+            onFinish(paresEncontrados)
+        }
+    }
+
+    Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(16.dp),
-        contentAlignment = Alignment.Center
+            .background(blanco)
+            .padding(24.dp),
     ) {
-        val total = cards.size
-        val columnas = calcularColumnas(total)
-        val filas = (total + columnas - 1) / columnas
-
-        val cardSpacing = 8.dp
-        val availableWidth = maxWidth - cardSpacing * (columnas - 1)
-        val availableHeight = maxHeight - cardSpacing * (filas - 1)
-        val cardSize = minOf(availableWidth / columnas, availableHeight / filas)
-
-        LazyVerticalGrid(
-            columns = GridCells.Fixed(columnas),
-            horizontalArrangement = Arrangement.spacedBy(cardSpacing),
-            verticalArrangement = Arrangement.spacedBy(cardSpacing),
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween,
             modifier = Modifier
-                .width(cardSize * columnas + cardSpacing * (columnas - 1))
-                .height(cardSize * filas + cardSpacing * (filas - 1))
+                .fillMaxWidth()
         ) {
-            itemsIndexed(cards) { index, card ->
-                Card(
-                    modifier = Modifier
-                        .size(cardSize)
-                        .clickable {
-                            if (cartasParaOcultar == null) {
-                                val antes = viewModel.cards
-                                viewModel.voltearCarta(index) { movimientos -> onFinish(movimientos) }
+            Text(
+                text = if (viewModel.musicaActiva) "🎵 Música activada" else "🔇 Música desactivada",
+                color = azulClaro,
+                fontSize = 16.sp,
+                fontWeight = FontWeight.Medium
+            )
+            Switch(
+                checked = viewModel.musicaActiva,
+                onCheckedChange = { viewModel.toggleMusica() },
+                colors = SwitchDefaults.colors(checkedThumbColor = azulClaro)
+            )
+        }
 
-                                val despues = viewModel.cards
-                                if (antes[index].isFaceUp == false && despues[index].isFaceUp == true) {
-                                    val flippedCards = despues.filter { it.isFaceUp && !it.isMatched }
-                                    if (flippedCards.size == 2) {
-                                        val idxs = despues.mapIndexedNotNull { i, c -> if (c.isFaceUp && !c.isMatched) i else null }
-                                        if (flippedCards[0].imageResId != flippedCards[1].imageResId) {
-                                            cartasParaOcultar = Pair(idxs[0], idxs[1])
-                                        }
-                                    }
+        Spacer(modifier = Modifier.height(24.dp))
+
+        Text(
+            text = "⏱ Tiempo restante: $tiempoRestante s",
+            fontSize = 18.sp,
+            color = azulClaro,
+            fontWeight = FontWeight.Bold
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+        Text(
+            text = "🧠 Pares encontrados: $paresEncontrados",
+            fontSize = 18.sp,
+            color = azulClaro,
+            fontWeight = FontWeight.Bold
+        )
+
+        Spacer(modifier = Modifier.height(24.dp))
+
+        // Cartas
+        BoxWithConstraints(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(bottom = 16.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            val cards = viewModel.cards
+            val total = cards.size
+            val columnas = calcularColumnas(total)
+            val filas = (total + columnas - 1) / columnas
+
+            val cardSpacing = 8.dp
+            val availableWidth = maxWidth - cardSpacing * (columnas - 1)
+            val availableHeight = maxHeight - cardSpacing * (filas - 1)
+            val cardSize = minOf(availableWidth / columnas, availableHeight / filas)
+
+            LazyVerticalGrid(
+                columns = GridCells.Fixed(columnas),
+                horizontalArrangement = Arrangement.spacedBy(cardSpacing),
+                verticalArrangement = Arrangement.spacedBy(cardSpacing),
+                modifier = Modifier
+                    .width(cardSize * columnas + cardSpacing * (columnas - 1))
+                    .height(cardSize * filas + cardSpacing * (filas - 1))
+            ) {
+                itemsIndexed(cards) { index, card ->
+                    Card(
+                        modifier = Modifier
+                            .size(cardSize)
+                            .clickable {
+                                if (viewModel.cartasParaOcultar == null) {
+                                    viewModel.voltearCarta(index) { pares -> onFinish(pares) }
                                 }
-                            }
-                        },
-                    shape = MaterialTheme.shapes.medium
-                ) {
-                    if (card.isFaceUp || card.isMatched) {
-                        Image(
-                            painter = painterResource(card.imageResId),
-                            contentDescription = null,
-                            contentScale = ContentScale.Crop,
-                            modifier = Modifier.fillMaxSize()
-                        )
-                    } else {
-                        Surface(
-                            modifier = Modifier.fillMaxSize(),
-                            color = MaterialTheme.colorScheme.primary
-                        ) {}
+                            },
+                        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
+                        colors = CardDefaults.cardColors(
+                            containerColor = if (card.isFaceUp || card.isMatched) blanco else azulClaroSuave
+                        ),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        if (card.isFaceUp || card.isMatched) {
+                            Image(
+                                painter = painterResource(card.imageResId),
+                                contentDescription = null,
+                                contentScale = ContentScale.Crop,
+                                modifier = Modifier.fillMaxSize()
+                            )
+                        }
                     }
                 }
             }
         }
     }
 }
-
 fun calcularColumnas(totalCartas: Int): Int {
     return when {
         totalCartas <= 8 -> 2
@@ -245,3 +188,4 @@ fun calcularColumnas(totalCartas: Int): Int {
         else -> 10
     }
 }
+

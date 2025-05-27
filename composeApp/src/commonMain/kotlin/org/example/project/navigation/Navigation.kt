@@ -8,16 +8,17 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.toRoute
 import org.example.project.screens.GameScreen
 import org.example.project.screens.HomeScreen
-import org.example.project.screens.Resultado
+import org.example.project.screens.ResultadoScreen
 import org.example.project.screens.SelectCategory
 import org.example.project.viewModel.MemoryViewModel
 
 @Composable
 fun AppNavigation() {
     val navController = rememberNavController()
-    val memoryViewmodel = remember { MemoryViewModel()}// aqui se crea manualmente
+    val memoryViewModel = remember { MemoryViewModel() } // creación manual
 
-    NavHost(navController, Home) {
+    NavHost(navController, startDestination = Home) {
+
         // Pantalla 1: Selección de dificultad
         composable<Home> {
             HomeScreen { dificultad ->
@@ -25,7 +26,7 @@ fun AppNavigation() {
             }
         }
 
-        //Elegir tipo
+        // Pantalla 2: Elegir tipo
         composable<Type> { backStackEntry ->
             val type = backStackEntry.toRoute<Type>()
             SelectCategory(
@@ -36,26 +37,25 @@ fun AppNavigation() {
             )
         }
 
-
         // Pantalla 3: Juego
         composable<Game> { backStackEntry ->
             val game = backStackEntry.toRoute<Game>()
             GameScreen(
                 dificultad = game.dificultad,
                 tipo = game.tipo,
-                onFinish = { resultado ->
-                    navController.navigate(Resultado(resultado))
-                },
-                viewModel = memoryViewmodel
+                viewModel = memoryViewModel,
+                onFinish = {
+                    navController.navigate(Resultado) // no pasamos resultado por argumento
+                }
             )
         }
 
         // Pantalla 4: Resultado
-        composable<Resultado> { backStackEntry ->
-            val resultado = backStackEntry.toRoute<Resultado>()
-            Resultado(
-                resultado = resultado.resultado,
-                onRestart = {
+        composable<Resultado> {
+            ResultadoScreen(
+                viewModel = memoryViewModel,
+                navigateToInicio = {
+                    memoryViewModel.reiniciarJuego()
                     navController.navigate(Home) {
                         popUpTo<Home> { inclusive = true }
                     }

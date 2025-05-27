@@ -12,6 +12,7 @@ androidx-lifecycle = "2.9.0"
 androidx-testExt = "1.2.1"
 composeHotReload = "1.0.0-alpha10"
 composeMultiplatform = "1.8.1"
+jlayer = "1.0.1"
 junit = "4.13.2"
 kotlin = "2.1.21"
 kotlinx-coroutines = "1.10.2"
@@ -19,6 +20,7 @@ kotlinxSerializationJson = "1.8.1"
 navigationCompose = "2.9.0-beta01"
 
 [libraries]
+jlayer = { module = "javazoom:jlayer", version.ref = "jlayer" }
 kotlin-test = { module = "org.jetbrains.kotlin:kotlin-test", version.ref = "kotlin" }
 kotlin-testJunit = { module = "org.jetbrains.kotlin:kotlin-test-junit", version.ref = "kotlin" }
 junit = { module = "junit:junit", version.ref = "junit" }

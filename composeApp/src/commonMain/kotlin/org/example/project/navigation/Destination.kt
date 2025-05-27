@@ -15,4 +15,4 @@ data class Game( val dificultad: String, val tipo:String)
 
 @Serializable
 
-data class Resultado(val resultado:Int)
+object Resultado

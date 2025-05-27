@@ -1,5 +1,9 @@
 package org.example.project.audio
 
-expect class AudioPlayer() {
-    fun playSound()
+expect object AudioPlayer {
+    fun play()
+    fun pause()
+    fun resume()
+    fun stop()
+    fun isPlaying(): Boolean
 }

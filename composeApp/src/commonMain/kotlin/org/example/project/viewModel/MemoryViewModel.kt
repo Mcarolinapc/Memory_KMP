@@ -45,15 +45,15 @@ class MemoryViewModel : ViewModel() {
         }
     }
 
-//    //futuras actulizaciones
-//
-//    fun actualizarDificultad(nueva: String) {
-//        dificultad = nueva
-//    }
-//    //actualizaciones
-//    fun actualizarTipo(nuevo: String) {
-//        tipo = nuevo
-//    }
+    //futuras actulizaciones
+
+   fun actualizarDificultad(nueva: String) {
+        dificultad = nueva
+   }
+    //actualizaciones
+    fun actualizarTipo(nuevo: String) {
+        tipo = nuevo
+    }
 
     fun toggleMusica() {
         musicaActiva = !musicaActiva

@@ -65,9 +65,9 @@ https://github.com/user-attachments/assets/2653776f-e544-464b-99b0-1f71c5d3ddd7
     <img src="Imagenes/seleccion.jpeg" width="220" alt="Selección de Tipo de Baraja">
     <img src="Imagenes/pantallaInicio.jpeg" width="220" alt="Tablero Inicial Oculto">
     <img src="Imagenes/gameScreen.jpeg" width="220" alt="Juego en marcha">
-    <img src="Imagenes/pantallaFinaljpeg" width="220" alt="Panatalla fin del Juego">
-     <img src="Imagenes/memoryWeb.jpeg" width="220" alt="Tablero web nivel fácil">
-     <img src="Imagenes/memoryWeb1.jpeg" width="220" alt="Tablero web nivel Medio">
+    <img src="Imagenes/pantallaFinal.jpeg" width="220" alt="Panatalla fin del Juego">
+     <img src="Imagenes/memoryWeb.png" width="220" alt="Tablero web nivel fácil">
+     <img src="Imagenes/memoryWeb1.png" width="220" alt="Tablero web nivel Medio">
   </div>
 
 
